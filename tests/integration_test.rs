@@ -29,6 +29,15 @@ fn test_detects_raw_git_diff_in_prefix() {
 }
 
 #[test]
+fn test_detects_thinking_trace_in_history_prefix() {
+    let analyzer = Analyzer::new();
+    let prompt = "User: Hello\nAssistant: <think>Evaluating best response approach...</think>\nHere is the answer.\n";
+    let issues = analyzer.analyze_file(&PathBuf::from("chat_agent.py"), prompt);
+    assert!(!issues.is_empty());
+    assert!(issues.iter().any(|i| i.rule_id.contains("KV008")));
+}
+
+#[test]
 fn test_clean_prompt_passes_with_100_score() {
     let analyzer = Analyzer::new();
     let prompt = "# Static instruction block\nSYSTEM_PROMPT = \"You are an expert compiler engineer. Always return valid ASTs.\"\n\ndef execute_task(task_payload):\n    return f\"{SYSTEM_PROMPT}\\nTask: {task_payload}\"\n";

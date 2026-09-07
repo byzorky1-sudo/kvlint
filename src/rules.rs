@@ -16,7 +16,57 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(UncachedFewShotOrderRule::new()),
         Box::new(DynamicDateInJinjaRule::new()),
         Box::new(DynamicGitDiffInPrefixRule::new()),
+        Box::new(DynamicThinkingHistoryPollutionRule::new()),
     ]
+}
+
+/// Rule 8: Dynamic Thinking / Reasoning Trace in Prefix / History Context
+/// Detects unstripped chain-of-thought (<think> tags, reasoning_content, thought history) in prompt prefixes
+pub struct DynamicThinkingHistoryPollutionRule {
+    pattern: Regex,
+}
+
+impl Default for DynamicThinkingHistoryPollutionRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DynamicThinkingHistoryPollutionRule {
+    pub fn new() -> Self {
+        Self {
+            pattern: Regex::new(
+                r#"(?i)(<think>[\s\S]*?</think>|\breasoning_content\b|\bthinking_trace\b|\bthought_history\b|\[thought\][\s\S]*?\[/thought\]|<thought>)"#,
+            )
+            .unwrap(),
+        }
+    }
+}
+
+impl Rule for DynamicThinkingHistoryPollutionRule {
+    fn id(&self) -> &'static str {
+        "KV008_THINKING_TRACE_HISTORY_POLLUTION"
+    }
+
+    fn check(&self, path: &Path, content: &str) -> Vec<PromptIssue> {
+        let mut issues = Vec::new();
+        for (idx, line) in content.lines().enumerate() {
+            if idx < 30 && self.pattern.is_match(line) {
+                issues.push(PromptIssue {
+                    rule_id: self.id().to_string(),
+                    severity: IssueSeverity::Critical,
+                    file: path.to_path_buf(),
+                    line: idx + 1,
+                    title: "Reasoning/Thinking trace in prompt prefix pollutes Radix/Prefix cache".to_string(),
+                    explanation: "Feeding non-deterministic reasoning tokens (<think>...</think> / thought_history) into multi-turn history prefixes creates dead branches in RadixAttention / SGLang prefix trees, causing 0% cache reuse.".to_string(),
+                    recommendation: "Strip volatile reasoning tokens before appending assistant turns to conversation history, or isolate CoT traces into ephemeral tails.".to_string(),
+                    snippet: line.trim().to_string(),
+                    estimated_token_waste_pct: 85,
+                });
+            }
+        }
+        issues
+    }
 }
 
 /// Rule 7: Un-sanitized Raw Git Diff Ingestion at Prompt Prefix
