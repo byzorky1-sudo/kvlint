@@ -1,4 +1,25 @@
-target/
+# Build & Binary artifacts
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Environment & Secrets (STRICT GUARD)
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.token
+*.sqlite
+*.db
 accounts.db
-*.lock
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Logs
 *.log
+/logs/
