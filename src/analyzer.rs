@@ -54,14 +54,18 @@ impl Analyzer {
     }
 
     pub fn compute_score(&self, issues: &[PromptIssue]) -> u8 {
-        let mut score = 100i32;
+        self.calculate_score(issues)
+    }
+
+    pub fn calculate_score(&self, issues: &[PromptIssue]) -> u8 {
+        let mut score: i32 = 100;
         for issue in issues {
             match issue.severity {
-                IssueSeverity::Critical => score -= 25,
-                IssueSeverity::Warning => score -= 10,
+                IssueSeverity::Critical => score -= 30,
+                IssueSeverity::Warning => score -= 15,
                 IssueSeverity::Optimization => score -= 5,
             }
         }
-        score.max(0).min(100) as u8
+        score.clamp(0, 100) as u8
     }
 }

@@ -15,12 +15,65 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(DynamicVariableAtTopRule::new()),
         Box::new(UncachedFewShotOrderRule::new()),
         Box::new(DynamicDateInJinjaRule::new()),
+        Box::new(DynamicGitDiffInPrefixRule::new()),
     ]
+}
+
+/// Rule 7: Un-sanitized Raw Git Diff Ingestion at Prompt Prefix
+/// e.g. dumping raw git diffs, file hashes, or git commit SHAs at the beginning of prompt context
+pub struct DynamicGitDiffInPrefixRule {
+    pattern: Regex,
+}
+
+impl Default for DynamicGitDiffInPrefixRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DynamicGitDiffInPrefixRule {
+    pub fn new() -> Self {
+        Self {
+            pattern: Regex::new(r#"(?i)(git diff|git log|diff --git|\bcommit [0-9a-f]{7,40}\b|\bsha256:[0-9a-f]{64}\b)"#).unwrap(),
+        }
+    }
+}
+
+impl Rule for DynamicGitDiffInPrefixRule {
+    fn id(&self) -> &'static str {
+        "KV007_RAW_DIFF_IN_PREFIX"
+    }
+
+    fn check(&self, path: &Path, content: &str) -> Vec<PromptIssue> {
+        let mut issues = Vec::new();
+        for (idx, line) in content.lines().enumerate() {
+            if idx < 30 && self.pattern.is_match(line) {
+                issues.push(PromptIssue {
+                    rule_id: self.id().to_string(),
+                    severity: IssueSeverity::Critical,
+                    file: path.to_path_buf(),
+                    line: idx + 1,
+                    title: "Raw volatile Git Diff or Commit SHA in prompt prefix".to_string(),
+                    explanation: "Dumping raw git diffs or commit hashes near the prompt root invalidates the entire KV cache on every commit. Diff payloads must be isolated to the message tail.".to_string(),
+                    recommendation: "Separate static system instructions and tool definitions from volatile git diffs. Place diffs strictly in the final user message.".to_string(),
+                    snippet: line.trim().to_string(),
+                    estimated_token_waste_pct: 90,
+                });
+            }
+        }
+        issues
+    }
 }
 
 /// Rule 6: Dynamic Date / Random functions inside Jinja2 / Mustache templates
 pub struct DynamicDateInJinjaRule {
     pattern: Regex,
+}
+
+impl Default for DynamicDateInJinjaRule {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DynamicDateInJinjaRule {
@@ -63,6 +116,12 @@ pub struct DynamicTimestampRule {
     pattern: Regex,
 }
 
+impl Default for DynamicTimestampRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DynamicTimestampRule {
     pub fn new() -> Self {
         Self {
@@ -103,10 +162,16 @@ pub struct DynamicUuidRule {
     pattern: Regex,
 }
 
+impl Default for DynamicUuidRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DynamicUuidRule {
     pub fn new() -> Self {
         Self {
-            pattern: Regex::new(r#"(?i)(uuid\.uuid4\(\)|crypto\.randomUUID\(\)|\bnonce\b|\bsession_id\b|\brequest_id\b|\btrace_id\b)"#).unwrap(),
+            pattern: Regex::new(r#"(?i)(uuid\.uuid4\(\)|crypto\.randomUUID\(\)|\bnonce\b|\bsession_id\b|\brequest_id\b|\btrace_id\b|\bspan_id\b|\b\{\{uuid\}\}|\b\{uuid\}\})"#).unwrap(),
         }
     }
 }
@@ -142,10 +207,16 @@ pub struct DynamicVariableAtTopRule {
     pattern: Regex,
 }
 
+impl Default for DynamicVariableAtTopRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DynamicVariableAtTopRule {
     pub fn new() -> Self {
         Self {
-            pattern: Regex::new(r#"(\{\{\s*(user_input|query|input|prompt|user_query|context|user_data)\s*\}\}|\{\s*(user_input|query|input|user_query|context)\s*\})"#).unwrap(),
+            pattern: Regex::new(r#"(\{\{\s*(user_input|query|input|prompt|user_query|context|user_data)\s*\}\}|\{\s*(user_input|query|input|prompt|user_query|context|user_data)\s*\})"#).unwrap(),
         }
     }
 }
@@ -181,11 +252,17 @@ pub struct UnstableSystemPromptPrefixRule {
     pattern: Regex,
 }
 
+impl Default for UnstableSystemPromptPrefixRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UnstableSystemPromptPrefixRule {
     pub fn new() -> Self {
         Self {
             pattern: Regex::new(
-                r#"(?i)(random\.shuffle|Math\.random\(\)|\.sort\(\s*=>\s*Math\.random)"#,
+                r#"(?i)(random\.shuffle|Math\.random\(\)|\.sort\(\s*=>\s*Math\.random|\.sample\(|\bshuffle\()"#,
             )
             .unwrap(),
         }
@@ -221,6 +298,12 @@ impl Rule for UnstableSystemPromptPrefixRule {
 /// Rule 5: Few-Shot Order Optimization
 pub struct UncachedFewShotOrderRule {
     pattern: Regex,
+}
+
+impl Default for UncachedFewShotOrderRule {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl UncachedFewShotOrderRule {

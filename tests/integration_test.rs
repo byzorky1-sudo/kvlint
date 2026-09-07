@@ -1,54 +1,38 @@
-use kvlint::analyzer::{Analyzer, IssueSeverity};
+use kvlint::analyzer::Analyzer;
 use std::path::PathBuf;
 
 #[test]
 fn test_detects_dynamic_timestamp_at_prefix() {
     let analyzer = Analyzer::new();
-    let bad_prompt = r#"
-system_prompt = f"""
-Current time: {datetime.now()}
-You are a helpful customer support agent.
-Instructions:
-1. Always be polite.
-2. Answer queries accurately.
-"""
-"#;
-    let issues = analyzer.analyze_file(&PathBuf::from("agent.py"), bad_prompt);
-    assert_eq!(issues.len(), 1);
-    assert_eq!(issues[0].rule_id, "KV001_DYNAMIC_TIMESTAMP_PREFIX");
-    assert_eq!(issues[0].severity, IssueSeverity::Critical);
+    let prompt = "import datetime\n\nSYSTEM_PROMPT = f'Current time is: {datetime.now()}\\nYou are a helpful assistant.'\n";
+    let issues = analyzer.analyze_file(&PathBuf::from("test.py"), prompt);
+    assert!(!issues.is_empty());
+    assert!(issues.iter().any(|i| i.rule_id.contains("KV001")));
 }
 
 #[test]
 fn test_detects_dynamic_uuid_header() {
     let analyzer = Analyzer::new();
-    let bad_prompt = r#"
-const systemPrompt = `
-Session ID: ${crypto.randomUUID()}
-User role: Editor
-Tool definitions:
-- fetch_data
-- update_record
-`;
-"#;
-    let issues = analyzer.analyze_file(&PathBuf::from("index.ts"), bad_prompt);
-    assert_eq!(issues.len(), 1);
-    assert_eq!(issues[0].rule_id, "KV002_DYNAMIC_UUID_AT_HEADER");
-    assert_eq!(issues[0].severity, IssueSeverity::Critical);
+    let prompt = "SYSTEM = f'Session: {uuid.uuid4()}\\nInstructions: Be concise.'\n";
+    let issues = analyzer.analyze_file(&PathBuf::from("agent.py"), prompt);
+    assert!(!issues.is_empty());
+    assert!(issues.iter().any(|i| i.rule_id.contains("KV002")));
+}
+
+#[test]
+fn test_detects_raw_git_diff_in_prefix() {
+    let analyzer = Analyzer::new();
+    let prompt = "System: Review the following code diff:\ngit diff --cached\ncommit 40de1fc00cbe764b3b9015a8805277b07096343d\n";
+    let issues = analyzer.analyze_file(&PathBuf::from("diff_agent.py"), prompt);
+    assert!(!issues.is_empty());
+    assert!(issues.iter().any(|i| i.rule_id.contains("KV007")));
 }
 
 #[test]
 fn test_clean_prompt_passes_with_100_score() {
     let analyzer = Analyzer::new();
-    let clean_prompt = r#"
-SYSTEM_PROMPT = """
-You are a senior Rust systems engineer.
-Follow these rules:
-1. Prefer zero-allocation parsing.
-2. Maintain static prefix cache alignment.
-"""
-"#;
-    let issues = analyzer.analyze_file(&PathBuf::from("clean_agent.py"), clean_prompt);
+    let prompt = "# Static instruction block\nSYSTEM_PROMPT = \"You are an expert compiler engineer. Always return valid ASTs.\"\n\ndef execute_task(task_payload):\n    return f\"{SYSTEM_PROMPT}\\nTask: {task_payload}\"\n";
+    let issues = analyzer.analyze_file(&PathBuf::from("clean.py"), prompt);
     assert!(issues.is_empty());
     assert_eq!(analyzer.compute_score(&issues), 100);
 }

@@ -7,7 +7,7 @@ use kvlint::{
     scanner::find_source_files,
 };
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 #[command(
@@ -119,7 +119,7 @@ fn main() {
     }
 }
 
-fn run_scan(target_path: &PathBuf, json_output: bool, strict_mode: bool) {
+fn run_scan(target_path: &Path, json_output: bool, strict_mode: bool) {
     if !target_path.exists() {
         eprintln!("❌ Target path does not exist: {}", target_path.display());
         std::process::exit(1);
@@ -162,7 +162,7 @@ fn run_scan(target_path: &PathBuf, json_output: bool, strict_mode: bool) {
     }
 }
 
-fn run_fix(target_path: &PathBuf, dry_run: bool) {
+fn run_fix(target_path: &Path, dry_run: bool) {
     let files = find_source_files(target_path);
     let optimizer = Optimizer::new();
     let mut total_repaired = 0;
@@ -172,7 +172,7 @@ fn run_fix(target_path: &PathBuf, dry_run: bool) {
     for file in files {
         if let Ok(content) = fs::read_to_string(&file) {
             let res = optimizer.optimize_prompt_text(&content);
-            if res.changes_made.len() > 0 {
+            if !res.changes_made.is_empty() {
                 total_repaired += 1;
                 if dry_run {
                     println!("🔍 [DRY-RUN] Would optimize: {}", file.display());
@@ -205,7 +205,7 @@ fn run_benchmark(path: &PathBuf, requests: u64, price_per_m: f64) {
     }
 
     let content = fs::read_to_string(path).expect("Failed to read file");
-    let prompt_tokens = (content.len() + 3) / 4; // Estimate 4 chars per token
+    let prompt_tokens = content.len().div_ceil(4); // Estimate 4 chars per token
 
     let tokens_per_month_uncached = (prompt_tokens as u64) * requests;
     let tokens_per_month_cached = (prompt_tokens as u64 / 10) * requests; // 90% savings on cache hits

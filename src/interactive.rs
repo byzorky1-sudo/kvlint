@@ -78,7 +78,7 @@ pub fn start_interactive_menu() {
                 for f in files {
                     if let Ok(content) = std::fs::read_to_string(&f) {
                         let opt = optimizer.optimize_prompt_text(&content);
-                        if opt.changes_made.len() > 0 {
+                        if !opt.changes_made.is_empty() {
                             let _ = std::fs::write(&f, opt.optimized_content);
                             println!("  {} Repaired prefix in: {}", "✅".green(), f.display());
                         }
@@ -86,7 +86,7 @@ pub fn start_interactive_menu() {
                 }
                 println!("\n{} Optimization complete!\n", "✨".yellow());
             } else if selected.starts_with("💰 3.") {
-                let target = Text::new("Prompt file to benchmark:")
+                let _target_file = Text::new("Prompt file to benchmark:")
                     .with_default("./prompts/agent.py")
                     .prompt()
                     .unwrap_or_else(|_| "./prompts/agent.py".to_string());
