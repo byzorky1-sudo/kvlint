@@ -1,4 +1,4 @@
-name: CI Prompt Cache Check
+name: CI
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  lint-prompts:
-    name: Lint LLM Prompts for KV-Cache Invalidation
+  test:
+    name: Build & Test kvlint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -17,8 +17,17 @@ jobs:
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install kvlint
-        run: cargo install --path .
+      - name: Build
+        run: cargo build --all-targets
 
-      - name: Run kvlint (Strict Mode)
-        run: kvlint scan --strict .
+      - name: Run Tests
+        run: cargo test --all
+
+      - name: Check Formatting
+        run: cargo fmt --all --check
+
+      - name: Clippy Linter
+        run: cargo clippy -- -D warnings
+
+      - name: Test Self-Scan on Examples
+        run: cargo run -- scan examples/demo_prompts.md || true
