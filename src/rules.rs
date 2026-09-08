@@ -17,7 +17,57 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(DynamicDateInJinjaRule::new()),
         Box::new(DynamicGitDiffInPrefixRule::new()),
         Box::new(DynamicThinkingHistoryPollutionRule::new()),
+        Box::new(UnsortedDictSerializationRule::new()),
     ]
+}
+
+/// Rule 9: Unsorted Dict / JSON Serialization in Prefix (Breaks Deterministic Prefix Hash)
+/// Detects json.dumps() without sort_keys=True, or unordered dict/set dumping in prompt prefix
+pub struct UnsortedDictSerializationRule {
+    pattern: Regex,
+}
+
+impl Default for UnsortedDictSerializationRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl UnsortedDictSerializationRule {
+    pub fn new() -> Self {
+        Self {
+            pattern: Regex::new(r#"(?i)(json\.dumps\(|JSON\.stringify\(|pydantic\.model_dump_json\(\))"#).unwrap(),
+        }
+    }
+}
+
+impl Rule for UnsortedDictSerializationRule {
+    fn id(&self) -> &'static str {
+        "KV009_UNSORTED_JSON_SERIALIZATION_IN_PREFIX"
+    }
+
+    fn check(&self, path: &Path, content: &str) -> Vec<PromptIssue> {
+        let mut issues = Vec::new();
+        for (idx, line) in content.lines().enumerate() {
+            if idx < 30 && self.pattern.is_match(line) {
+                // If json.dumps is used, verify if sort_keys=True is present
+                if line.contains("json.dumps") && !line.contains("sort_keys") {
+                    issues.push(PromptIssue {
+                        rule_id: self.id().to_string(),
+                        severity: IssueSeverity::Warning,
+                        file: path.to_path_buf(),
+                        line: idx + 1,
+                        title: "Unsorted JSON serialization in prompt prefix".to_string(),
+                        explanation: "Serializing schemas, tool definitions, or metadata with `json.dumps()` without `sort_keys=True` leads to non-deterministic key ordering across environments/processes, breaking exact-match KV prefix caching.".to_string(),
+                        recommendation: "Always enforce deterministic key ordering: `json.dumps(obj, sort_keys=True)` or canonical schema formatting before injecting into prompt prefixes.".to_string(),
+                        snippet: line.trim().to_string(),
+                        estimated_token_waste_pct: 70,
+                    });
+                }
+            }
+        }
+        issues
+    }
 }
 
 /// Rule 8: Dynamic Thinking / Reasoning Trace in Prefix / History Context

@@ -23,3 +23,6 @@ accounts.db
 # Logs
 *.log
 /logs/
+
+# Environment & Secrets
+token.json

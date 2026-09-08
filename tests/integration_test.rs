@@ -38,6 +38,15 @@ fn test_detects_thinking_trace_in_history_prefix() {
 }
 
 #[test]
+fn test_detects_unsorted_json_in_prefix() {
+    let analyzer = Analyzer::new();
+    let prompt = "tools_schema = json.dumps(tools_dict)\nsystem_prompt = f\"Tools: {tools_schema}\\nExecute carefully.\"\n";
+    let issues = analyzer.analyze_file(&PathBuf::from("agent_tools.py"), prompt);
+    assert!(!issues.is_empty());
+    assert!(issues.iter().any(|i| i.rule_id.contains("KV009")));
+}
+
+#[test]
 fn test_clean_prompt_passes_with_100_score() {
     let analyzer = Analyzer::new();
     let prompt = "# Static instruction block\nSYSTEM_PROMPT = \"You are an expert compiler engineer. Always return valid ASTs.\"\n\ndef execute_task(task_payload):\n    return f\"{SYSTEM_PROMPT}\\nTask: {task_payload}\"\n";
