@@ -36,7 +36,10 @@ impl Default for UnsortedDictSerializationRule {
 impl UnsortedDictSerializationRule {
     pub fn new() -> Self {
         Self {
-            pattern: Regex::new(r#"(?i)(json\.dumps\(|JSON\.stringify\(|pydantic\.model_dump_json\(\))"#).unwrap(),
+            pattern: Regex::new(
+                r#"(?i)(json\.dumps\(|JSON\.stringify\(|pydantic\.model_dump_json\(\))"#,
+            )
+            .unwrap(),
         }
     }
 }
