@@ -28,7 +28,7 @@ pub fn start_interactive_menu() {
         "💰 3. Calculate GPU dollar & token savings (kvlint benchmark)",
         "📦 4. Install GitHub Actions CI workflow in this repo",
         "🪝 5. Setup Git pre-commit hook automatically",
-        "📚 6. View built-in rules (KV001-KV006) & architecture guide",
+        "📚 6. View built-in rules (KV001-KV010) & architecture guide",
         "🚪 0. Exit",
     ];
 
@@ -145,7 +145,11 @@ jobs:
                 println!("  • KV003: Dynamic User Variables Before Static Instructions");
                 println!("  • KV004: Unstable System Prompt Prefix (Shuffled Tools)");
                 println!("  • KV005: Uncached Few-Shot Example Order");
-                println!("  • KV006: Dynamic Jinja2 / Mustache Template Tags\n");
+                println!("  • KV006: Dynamic Jinja2 / Mustache Template Tags");
+                println!("  • KV007: Raw Volatile Git Diff or Commit SHA in Prompt Prefix");
+                println!("  • KV008: Reasoning / Thinking Trace History Pollution in Prefix");
+                println!("  • KV009: Unsorted Dict / JSON Serialization in Prefix");
+                println!("  • KV010: Dynamic Tool Schema Mutation in Prefix\n");
             }
         }
         Err(_) => {

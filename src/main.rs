@@ -241,23 +241,43 @@ fn print_rules_explanation() {
     println!("   Detects datetime.now(), new Date(), $(date) at prompt start.");
     println!("   Fix: Move timestamp to end of prompt or dynamic user turn.\n");
 
-    println!("2. KV002_DYNAMIC_UUID_IN_HEADER (Critical)");
+    println!("2. KV002_DYNAMIC_UUID_AT_HEADER (Critical)");
     println!("   Detects random session UUIDs generated before static instructions.");
     println!("   Fix: Keep session UUID in API request metadata or prompt footer.\n");
 
-    println!("3. KV003_DYNAMIC_VARIABLE_BEFORE_STATIC_INSTRUCTIONS (High)");
+    println!("3. KV003_USER_VARIABLE_BEFORE_SYSTEM_PREFIX (Warning)");
     println!("   Detects user variables injected before general system rules.");
     println!("   Fix: Reorder so static rules come first, dynamic data second.\n");
 
-    println!("4. KV004_UNSTABLE_SYSTEM_PROMPT_PREFIX (High)");
+    println!("4. KV004_SHUFFLED_PROMPT_COMPONENTS (Warning)");
     println!("   Detects shuffled tool descriptions or non-deterministic ordering.");
     println!("   Fix: Sort tools and document sections deterministically.\n");
 
-    println!("5. KV005_UNCACHED_FEW_SHOT_ORDER (Medium)");
+    println!("5. KV005_DYNAMIC_FEW_SHOT_ALIGNMENT (Optimization)");
     println!("   Detects random few-shot examples ordering across requests.");
     println!("   Fix: Freeze example ordering in system prompt prefix.\n");
 
     println!("6. KV006_DYNAMIC_TEMPLATE_TAG_IN_SYSTEM_PREFIX (Warning)");
-    println!("   Detects Jinja2 / Mustache dynamic tags {{ now }} / {{ random }} in header.");
+    println!(
+        "   Detects Jinja2 / Mustache dynamic tags {{{{ now }}}} / {{{{ random }}}} in header."
+    );
     println!("   Fix: Move Jinja2 runtime variables to user message body.\n");
+
+    println!("7. KV007_RAW_DIFF_IN_PREFIX (Critical)");
+    println!("   Detects un-sanitized raw Git diffs or commit SHAs in prompt prefix.");
+    println!("   Fix: Isolate dynamic Git diff payloads to user messages / message tail.\n");
+
+    println!("8. KV008_THINKING_TRACE_HISTORY_POLLUTION (Critical)");
+    println!("   Detects <think> tags, reasoning_content, or thought traces in prefix history.");
+    println!(
+        "   Fix: Strip volatile reasoning tokens before appending assistant turns to history.\n"
+    );
+
+    println!("9. KV009_UNSORTED_JSON_SERIALIZATION_IN_PREFIX (Warning)");
+    println!("   Detects json.dumps() without sort_keys=True in prefix schema serialization.");
+    println!("   Fix: Enforce sort_keys=True or canonical deterministic key ordering.\n");
+
+    println!("10. KV010_DYNAMIC_TOOL_SCHEMA_MUTATION_IN_PREFIX (Critical)");
+    println!("    Detects dynamic tool definitions or MCP schema mutations in prompt prefix.");
+    println!("    Fix: Pin static tool schemas at prompt root or isolate dynamic tools to tail.\n");
 }
