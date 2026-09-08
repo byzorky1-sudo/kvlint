@@ -18,7 +18,57 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(DynamicGitDiffInPrefixRule::new()),
         Box::new(DynamicThinkingHistoryPollutionRule::new()),
         Box::new(UnsortedDictSerializationRule::new()),
+        Box::new(DynamicToolSchemaInPrefixRule::new()),
     ]
+}
+
+/// Rule 10: Dynamic Tool Schema Mutation in Prefix
+/// Detects dynamic tool definitions or MCP schema mutations in the prompt header (first 35 lines)
+pub struct DynamicToolSchemaInPrefixRule {
+    pattern: Regex,
+}
+
+impl Default for DynamicToolSchemaInPrefixRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DynamicToolSchemaInPrefixRule {
+    pub fn new() -> Self {
+        Self {
+            pattern: Regex::new(
+                r#"(?i)(tools\s*=\s*\[|available_tools\s*=|functions\s*=\s*\[|mcp_servers|dynamic_tools)"#,
+            )
+            .unwrap(),
+        }
+    }
+}
+
+impl Rule for DynamicToolSchemaInPrefixRule {
+    fn id(&self) -> &'static str {
+        "KV010_DYNAMIC_TOOL_SCHEMA_MUTATION_IN_PREFIX"
+    }
+
+    fn check(&self, path: &Path, content: &str) -> Vec<PromptIssue> {
+        let mut issues = Vec::new();
+        for (idx, line) in content.lines().enumerate() {
+            if idx < 35 && self.pattern.is_match(line) {
+                issues.push(PromptIssue {
+                    rule_id: self.id().to_string(),
+                    severity: IssueSeverity::Critical,
+                    file: path.to_path_buf(),
+                    line: idx + 1,
+                    title: "Dynamic tool schema mutation in prefix breaks KV-cache".to_string(),
+                    explanation: "Injecting or mutating dynamic tool definitions / MCP schemas at the top of system prompts mutates prefix tokens per turn or session, breaking prefix KV-cache reuse (vLLM APC, SGLang RadixAttention).".to_string(),
+                    recommendation: "Pin and sort static tool schemas at the prompt root, or move dynamic per-session tool definitions to message tails.".to_string(),
+                    snippet: line.trim().to_string(),
+                    estimated_token_waste_pct: 80,
+                });
+            }
+        }
+        issues
+    }
 }
 
 /// Rule 9: Unsorted Dict / JSON Serialization in Prefix (Breaks Deterministic Prefix Hash)
