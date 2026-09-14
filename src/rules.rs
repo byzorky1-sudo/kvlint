@@ -19,7 +19,57 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(DynamicThinkingHistoryPollutionRule::new()),
         Box::new(UnsortedDictSerializationRule::new()),
         Box::new(DynamicToolSchemaInPrefixRule::new()),
+        Box::new(DynamicWorkdirHostPathInPrefixRule::new()),
     ]
+}
+
+/// Rule 11: Dynamic Local Working Directory or Host Header in Prefix
+/// Detects absolute filesystem paths, hostname, or process IDs in the top 30 lines
+pub struct DynamicWorkdirHostPathInPrefixRule {
+    pattern: Regex,
+}
+
+impl Default for DynamicWorkdirHostPathInPrefixRule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DynamicWorkdirHostPathInPrefixRule {
+    pub fn new() -> Self {
+        Self {
+            pattern: Regex::new(
+                r#"(?i)(working_dir\s*[:=]|current working directory\s*[:=]|\bos\.getcwd\(\)|\bprocess\.cwd\(\)|\b/home/[a-z0-9_\-]+/|\b/Users/[a-z0-9_\-]+/|\b[A-Za-z]:\\Users\\[a-z0-9_\-]+\\|\bhost:\s*[a-z0-9_\-\.]+)"#,
+            )
+            .unwrap(),
+        }
+    }
+}
+
+impl Rule for DynamicWorkdirHostPathInPrefixRule {
+    fn id(&self) -> &'static str {
+        "KV011_DYNAMIC_WORKDIR_HOST_PATH_IN_PREFIX"
+    }
+
+    fn check(&self, path: &Path, content: &str) -> Vec<PromptIssue> {
+        let mut issues = Vec::new();
+        for (idx, line) in content.lines().enumerate() {
+            if idx < 30 && self.pattern.is_match(line) {
+                issues.push(PromptIssue {
+                    rule_id: self.id().to_string(),
+                    severity: IssueSeverity::Critical,
+                    file: path.to_path_buf(),
+                    line: idx + 1,
+                    title: "Dynamic local filesystem path or host header in prompt prefix".to_string(),
+                    explanation: "Injecting machine-specific absolute working directories, user paths, or hostnames into the prompt header changes prefix tokens across worktrees, CI runners, and machines, destroying KV-cache reuse.".to_string(),
+                    recommendation: "Canonicalize working directories to relative paths or project root aliases (e.g. `/workspace`), or place environment headers strictly at the message tail.".to_string(),
+                    snippet: line.trim().to_string(),
+                    estimated_token_waste_pct: 85,
+                });
+            }
+        }
+        issues
+    }
 }
 
 /// Rule 10: Dynamic Tool Schema Mutation in Prefix

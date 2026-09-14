@@ -108,7 +108,7 @@ kvlint rules
 
 ---
 
-## 📚 Detection Rules (KV001 – KV010)
+## 📚 Detection Rules (KV001 – KV011)
 
 | Rule ID | Severity | Description & GPU Impact |
 | :--- | :--- | :--- |
@@ -122,6 +122,7 @@ kvlint rules
 | **`KV008_THINKING_TRACE_HISTORY_POLLUTION`** | 🚨 Critical | Unstripped reasoning tokens (`<think>`, `reasoning_content`) in multi-turn prefixes pollute prefix trees with dead branches. |
 | **`KV009_UNSORTED_JSON_SERIALIZATION_IN_PREFIX`** | ⚠️ Warning | `json.dumps()` without `sort_keys=True` leads to non-deterministic key ordering across processes and environments. |
 | **`KV010_DYNAMIC_TOOL_SCHEMA_MUTATION_IN_PREFIX`** | 🚨 Critical | Mutating dynamic tool definitions or MCP schemas in the prefix header breaks vLLM APC and SGLang RadixAttention cache reuse. |
+| **`KV011_DYNAMIC_WORKDIR_HOST_PATH_IN_PREFIX`** | 🚨 Critical | Machine-specific absolute paths (`/home/user/...`, `cwd = os.getcwd()`, `Host: worker`) in prompt headers destroy cache sharing across workers and worktrees. |
 
 ---
 

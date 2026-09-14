@@ -280,4 +280,8 @@ fn print_rules_explanation() {
     println!("10. KV010_DYNAMIC_TOOL_SCHEMA_MUTATION_IN_PREFIX (Critical)");
     println!("    Detects dynamic tool definitions or MCP schema mutations in prompt prefix.");
     println!("    Fix: Pin static tool schemas at prompt root or isolate dynamic tools to tail.\n");
+
+    println!("11. KV011_DYNAMIC_WORKDIR_HOST_PATH_IN_PREFIX (Critical)");
+    println!("    Detects absolute filesystem paths, hostname, or process IDs in prompt prefix.");
+    println!("    Fix: Canonicalize working dirs to relative/aliases or move to message tail.\n");
 }

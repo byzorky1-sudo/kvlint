@@ -80,3 +80,24 @@ fn test_clean_prompt_passes_with_100_score() {
     assert!(issues.is_empty());
     assert_eq!(analyzer.compute_score(&issues), 100);
 }
+
+#[test]
+fn test_detects_dynamic_workdir_or_host_in_prefix() {
+    let analyzer = Analyzer::new();
+    let prompt_with_workdir = r#"
+system_prompt = f"""
+You are a helpful coding agent.
+Working directory: /home/cent127/projects/myapp
+Host: worker-node-42.internal
+
+Instructions:
+Always check git status before editing files.
+"""
+"#;
+
+    let issues = analyzer.analyze_file(&PathBuf::from("agent.py"), prompt_with_workdir);
+    assert!(!issues.is_empty());
+    assert!(issues
+        .iter()
+        .any(|i| i.rule_id == "KV011_DYNAMIC_WORKDIR_HOST_PATH_IN_PREFIX"));
+}
